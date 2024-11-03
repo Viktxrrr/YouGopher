@@ -1,2 +1,2 @@
 # YouGopher
-Fast and easy to use YouTube video downloader written in Go
+Fast and easy to use YouTube video downloader with proxy support written in Go
