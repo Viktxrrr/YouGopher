@@ -31,7 +31,7 @@ func NewDownloadsManager(
 	}
 }
 
-func (dm *DownloadsManager) AddDownload(d Download) {
+func (dm *DownloadsManager) AddDownload(d *Download) {
 	dm.Downloads = append(dm.Downloads, d)
 }
 
@@ -79,12 +79,15 @@ func (dm *DownloadsManager) StartDownload(
 	}
 	defer outFile.Close()
 
+	doneChan := make(chan bool)
 	go func() {
 		_, err = io.Copy(outFile, downloadURL.Body)
 		if err != nil {
 			return
 		}
+		doneChan <- true
 	}()
+	<-doneChan
 
 	fmt.Printf("Downloaded video %s to %s", d.FormatToDownload.URL, destinationFile)
 	return

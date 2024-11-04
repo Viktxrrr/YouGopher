@@ -6,7 +6,10 @@ import (
 	"github.com/Viktxrrr/YouGopher/internal/utils"
 )
 
-func StartDownloadOnButtonClick(vd *downloader.VideoData, dm *downloader.DownloadsManager) {
+func StartDownloadOnButtonClick(
+	vd *downloader.VideoData,
+	dm *downloader.DownloadsManager,
+) {
 	selectedFormat, err := vd.GetSelectedFormat()
 	if err != nil {
 		panic(err)
@@ -18,7 +21,7 @@ func StartDownloadOnButtonClick(vd *downloader.VideoData, dm *downloader.Downloa
 		selectedFormat,
 		".",
 	)
-	dm.AddDownload(*d)
+	dm.AddDownload(d)
 	dm.StartDownload(d.ID)
 }
 
