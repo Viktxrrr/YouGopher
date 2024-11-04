@@ -60,7 +60,7 @@ func SanitizeFilename(fileName string) string {
 }
 
 func GetOutputFile(
-	format *youtube.Format,
+	format youtube.Format,
 	outputDir string,
 	outputFile string,
 ) (string, error) {

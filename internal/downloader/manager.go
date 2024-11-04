@@ -19,10 +19,12 @@ type DownloadsManager struct {
 }
 
 func NewDownloadsManager(
+	ytClient *youtube.Client,
 	httpClient *http.Client,
 	settings *settings.Settings,
 ) *DownloadsManager {
 	return &DownloadsManager{
+		YTClient:   ytClient,
 		HTTPClient: httpClient,
 		Settings:   settings,
 		Downloads:  []Download{},
@@ -51,20 +53,15 @@ func (dm *DownloadsManager) StartDownload(
 		return
 	}
 
-	if d.SelectedFormat == nil {
-		return fmt.Errorf("format not specified for download with id %s", id)
+	if d.FormatToDownload.URL == "" {
+		return fmt.Errorf("can't find format url for download with id %s", id)
 	}
 
-	downloadURL, err := dm.HTTPClient.Get(d.SelectedFormat.URL)
+	downloadURL, err := dm.HTTPClient.Get(d.FormatToDownload.URL)
 	if err != nil {
 		return fmt.Errorf("can't get download url for video: %v", err)
 	}
 	defer downloadURL.Body.Close()
-
-	video, err := d.GetVideo()
-	if err != nil {
-		return
-	}
 
 	outputDir := dm.Settings.Download.DefaultDownloadsDirPath
 	if d.DestinationDir != "" {
@@ -72,9 +69,9 @@ func (dm *DownloadsManager) StartDownload(
 	}
 
 	destinationFile, err := utils.GetOutputFile(
-		d.SelectedFormat,
+		d.FormatToDownload,
 		outputDir,
-		video.Title,
+		d.Title,
 	) // TODO: Добавить проверку существования файла
 	outFile, err := os.Create(destinationFile)
 	if err != nil {
@@ -82,11 +79,13 @@ func (dm *DownloadsManager) StartDownload(
 	}
 	defer outFile.Close()
 
-	_, err = io.Copy(outFile, downloadURL.Body)
-	if err != nil {
-		return
-	}
+	go func() {
+		_, err = io.Copy(outFile, downloadURL.Body)
+		if err != nil {
+			return
+		}
+	}()
 
-	fmt.Printf("Downloaded video %s to %s", d.URL, destinationFile)
+	fmt.Printf("Downloaded video %s to %s", d.FormatToDownload.URL, destinationFile)
 	return
 }

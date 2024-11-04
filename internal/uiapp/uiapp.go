@@ -43,21 +43,56 @@ type AppUI struct {
 	Settings         *settings.Settings
 }
 
-func NewAddDownloadWindow(
-	app fyne.App,
-	dm *downloader.DownloadsManager,
-) *AddDownloadWindow {
-	window := app.NewWindow("Add download")
-	window.SetContent(container.NewVBox(
-		widget.NewLabel("This is a child window!"),
-		widget.NewButton("Add", func() {
-		}),
-	))
+func CreateURLEntry() (urlEntry *widget.Entry) {
+	urlEntry = widget.NewEntry()
+	urlEntry.SetPlaceHolder("Video URL")
+	return
+}
 
-	window.Resize(fyne.NewSize(300, 200))
-	window.Show()
+func NewAddDownloadWindow(app fyne.App, dm *downloader.DownloadsManager) *AddDownloadWindow {
+	w := app.NewWindow("Add download")
+	urlEntry := CreateURLEntry()
+	qualitySelect := widget.NewSelect(nil, nil)
+	codecSelect := widget.NewSelect(nil, nil)
+
+	var vd *downloader.VideoData
+
+	urlEntry.OnChanged = func(url string) {
+		go HandleURLChange(url, dm, &vd, qualitySelect)
+	}
+
+	qualitySelect.OnChanged = func(quality string) {
+		if vd == nil {
+			return
+		}
+		go HandleQualityChange(vd, qualitySelect, codecSelect)
+	}
+
+	codecSelect.OnChanged = func(codec string) {
+		if vd == nil {
+			return
+		}
+		go HandleCodecChange(vd, codecSelect)
+	}
+
+	addButton := widget.NewButton("Add", func() {
+		if vd == nil {
+			return
+		}
+		go StartDownloadOnButtonClick(vd, dm)
+		w.Close()
+	})
+
+	container := container.NewVBox(
+		urlEntry,
+		qualitySelect,
+		codecSelect,
+		addButton,
+	)
+	w.SetContent(container)
+	w.Resize(fyne.NewSize(600, 300))
 	return &AddDownloadWindow{
-		Window:           window,
+		Window:           w,
 		DownloadsManager: dm,
 	}
 }
@@ -70,7 +105,7 @@ func NewMainWindow(
 	app fyne.App,
 	dm *downloader.DownloadsManager,
 ) *MainWindow {
-	mainWindow := app.NewWindow("YouGopher")
+	w := app.NewWindow("YouGopher")
 	addDownloadButton := widget.NewButton("Add download", func() {
 		addDownloadWindow := NewAddDownloadWindow(app, dm)
 		addDownloadWindow.Show()
@@ -80,7 +115,7 @@ func NewMainWindow(
 			return len(dm.Downloads)
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel("Template")
+			return widget.NewLabel("")
 		},
 		func(i int, o fyne.CanvasObject) {
 			download := dm.Downloads[i]
@@ -88,13 +123,14 @@ func NewMainWindow(
 		},
 	)
 	mainContainer := container.NewVBox(
-		layout.NewSpacer(), // Отступ между списком и кнопкой
+		downloadsList,
+		layout.NewSpacer(),
 		addDownloadButton,
 	)
-	mainWindow.SetContent(mainContainer)
-	mainWindow.Resize(fyne.NewSize(400, 300))
+	w.SetContent(mainContainer)
+	w.Resize(fyne.NewSize(800, 600))
 	return &MainWindow{
-		Window:            mainWindow,
+		Window:            w,
 		DownloadsList:     downloadsList,
 		AddDownloadButton: addDownloadButton,
 		DownloadsManager:  dm,
